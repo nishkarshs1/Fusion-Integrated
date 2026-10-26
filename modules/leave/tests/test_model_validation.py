@@ -9,99 +9,14 @@ Verifies:
 """
 from __future__ import annotations
 
-import sys
-import types
 import unittest
 from datetime import date
 
-# Set up lightweight mock shim if django is not installed in current environment
-try:
-    import django  # noqa: F401
-    from django.core.exceptions import ValidationError
+import modules.leave.tests._shim  # isort: skip # noqa: F401
 
-    from modules.leave.models import LeaveApplication, LeaveCategory
-except ImportError:
-    class DummyModel:
-        def clean(self) -> None:
-            pass
+from django.core.exceptions import ValidationError
 
-    class DummyTimeStamped(DummyModel):
-        pass
-
-    class DummyUserScoped(DummyModel):
-        pass
-
-    class DummyChoices:
-        CL = "CL"
-        RH = "RH"
-        SCL = "SCL"
-        EL = "EL"
-        COL = "COL"
-        VL = "VL"
-        choices = [
-            ("CL", "Casual Leave"),
-            ("RH", "Restricted Holiday"),
-            ("SCL", "Special Casual Leave"),
-            ("EL", "Earned Leave"),
-            ("COL", "Commuted Leave"),
-            ("VL", "Vacation Leave"),
-        ]
-
-    class DummyField:
-        def __init__(self, *args, **kwargs) -> None:
-            pass
-
-    class DummyModels:
-        Model = DummyModel
-        TextChoices = DummyChoices
-        CharField = DummyField
-        DateField = DummyField
-        TextField = DummyField
-        BooleanField = DummyField
-        JSONField = DummyField
-        IntegerField = DummyField
-        PositiveSmallIntegerField = DummyField
-        DecimalField = DummyField
-        ForeignKey = DummyField
-        DateTimeField = DummyField
-        CASCADE = None
-        UniqueConstraint = DummyField
-        Index = DummyField
-
-    django_mod = types.ModuleType("django")
-    django_db = types.ModuleType("django.db")
-    django_db.models = DummyModels
-    django_core = types.ModuleType("django.core")
-    django_core_exc = types.ModuleType("django.core.exceptions")
-
-    class ValidationError(Exception):
-        def __init__(self, message_dict: dict) -> None:
-            self.message_dict = message_dict
-            super().__init__(str(message_dict))
-
-    django_core_exc.ValidationError = ValidationError
-    django_utils = types.ModuleType("django.utils")
-    django_utils_trans = types.ModuleType("django.utils.translation")
-    django_utils_trans.gettext_lazy = lambda s: s
-
-    core = types.ModuleType("core")
-    core_db = types.ModuleType("core.db")
-    core_db_mixins = types.ModuleType("core.db.mixins")
-    core_db_mixins.TimeStampedModel = DummyTimeStamped
-    core_db_mixins.UserScopedModel = DummyUserScoped
-
-    sys.modules["django"] = django_mod
-    sys.modules["django.db"] = django_db
-    sys.modules["django.db.models"] = DummyModels
-    sys.modules["django.core"] = django_core
-    sys.modules["django.core.exceptions"] = django_core_exc
-    sys.modules["django.utils"] = django_utils
-    sys.modules["django.utils.translation"] = django_utils_trans
-    sys.modules["core"] = core
-    sys.modules["core.db"] = core_db
-    sys.modules["core.db.mixins"] = core_db_mixins
-
-    from modules.leave.models import LeaveApplication, LeaveCategory
+from modules.leave.models import LeaveApplication, LeaveCategory
 
 
 class TestLeaveApplicationValidation(unittest.TestCase):
