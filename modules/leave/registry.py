@@ -8,24 +8,9 @@ MODULE = {
     "status": "active",
 }
 
-NAV_ITEMS = [
-    {
-        "code": "leave.applications",
-        "label": "Leave Applications",
-        "icon": "CalendarBlank",
-        "to": "/leave",
-        "required_permission": "leave.application.view",
-        "sort_order": 10,
-    },
-    {
-        "code": "leave.apply",
-        "label": "Apply for Leave",
-        "icon": "PlusCircle",
-        "to": "/leave/apply",
-        "required_permission": "leave.application.create",
-        "sort_order": 20,
-    },
-]
+#: Headless / API-only in Phase 1: no client-side routes exist yet, so NAV_ITEMS is empty
+#: to avoid dead links and pass ops/checks/nav_matches_routes.py per role-assignment-guide.md.
+NAV_ITEMS = []
 
 PERMISSIONS = [
     ("leave.application.view", "See leave applications"),

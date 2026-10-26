@@ -4,7 +4,13 @@ from django.utils.translation import gettext_lazy as _
 
 from core.db.mixins import TimeStampedModel, UserScopedModel
 
-from .domain.rules import is_half_day_cl_valid, is_overlap_valid
+from .domain.rules import (
+    ANNUAL_ENTITLEMENTS,
+    calculate_chargeable_days,
+    is_half_day_cl_valid,
+    is_overlap_valid,
+    is_substitute_valid,
+)
 
 
 class LeaveCategory(models.TextChoices):
@@ -45,6 +51,13 @@ class LeaveApplication(TimeStampedModel, UserScopedModel):
 
     def clean(self) -> None:
         super().clean()
+        if self.substitute_id is not None and not is_substitute_valid(
+            self.user_id, self.substitute_id
+        ):
+            raise ValidationError({
+                "substitute_id": _("Substitute cannot be the applicant themselves."),
+            })
+
         if self.half_day_cl and not is_half_day_cl_valid(
             self.half_day_cl, self.category, self.start_date, self.end_date
         ):
@@ -65,6 +78,39 @@ class LeaveApplication(TimeStampedModel, UserScopedModel):
             raise ValidationError({
                 "start_date": _("Start date must be on or before end date."),
             })
+
+        if (
+            self.start_date
+            and self.end_date
+            and self.start_date <= self.end_date
+        ):
+            max_quota = ANNUAL_ENTITLEMENTS.get(self.category)
+            if max_quota is not None:
+                chargeable = self.chargeable_days()
+                if chargeable > max_quota:
+                    raise ValidationError({
+                        "category": _(
+                            "Requested leave (%(chargeable).1f days) exceeds maximum annual "
+                            "entitlement of %(max_quota).1f days for %(category)s."
+                        )
+                        % {
+                            "chargeable": chargeable,
+                            "max_quota": max_quota,
+                            "category": self.get_category_display(),
+                        },
+                    })
+
+    def chargeable_days(self, holidays: set | None = None) -> float:
+        """Compute net chargeable days for this leave application."""
+        if not self.start_date or not self.end_date or self.start_date > self.end_date:
+            return 0.0
+        return calculate_chargeable_days(
+            category=self.category,
+            start_date=self.start_date,
+            end_date=self.end_date,
+            half_day_cl=self.half_day_cl,
+            holidays=holidays,
+        )
 
     def __str__(self) -> str:
         return f"app#{self.pk} u{self.user_id} {self.status}"
